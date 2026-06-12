@@ -572,15 +572,17 @@ async function handleUploadFile(e){
   if(['pdf','docx','doc'].indexOf(ext)===-1){toast('仅支持 PDF、DOCX、DOC 格式');return}
   var st=document.getElementById('uploadStatus');st.style.display='block';st.textContent='正在上传 '+name+' ...';
   try{
-    var ts=Date.now(),storagePath='guides_'+ts+'_'+name;
+    var ts=Date.now(),safeName=name.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9\u4e00-\u9fff._-]/g,'');
+    var storagePath='guides_'+ts+'_'+safeName;
+    var encodedPath=encodeURIComponent(storagePath);
     // upload to Supabase Storage via fetch (bypass supabase-js storage module)
-    var upRes=await fetch(SUPABASE_URL+'/storage/v1/object/guides/'+storagePath,{
+    var upRes=await fetch(SUPABASE_URL+'/storage/v1/object/guides/'+encodedPath,{
       method:'POST',
       headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'x-upsert':'false'},
       body:file
     });
     if(!upRes.ok){var errBody=await upRes.text();throw new Error('上传失败 HTTP'+upRes.status+': '+errBody)}
-    var fileData=SUPABASE_URL+'/storage/v1/object/public/guides/'+storagePath;
+    var fileData=SUPABASE_URL+'/storage/v1/object/public/guides/'+encodedPath;
     // extract text for search
     st.textContent='正在解析文本...';
     var text='',ab=await file.arrayBuffer();

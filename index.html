@@ -558,15 +558,9 @@ function renderGuides(){
   em.style.display='none';tw.style.display='block';
   var catColors={'职业攻略':'#6aa0e0','副本攻略':'#e87070','PVP':'#b080d0','专业/赚钱':'#e8a050','成就/收集':'#50c0b0','插件/宏':'#e0d050','其它':'var(--text-muted)'};
   tb.innerHTML=filtered.map(function(g){var cc=g.category?'<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:'+(catColors[g.category]||'var(--text-muted)')+';color:#000;font-size:11px;font-weight:600">'+esc(g.category)+'</span>':'';var cl=g.guideClass?'<span class="class-tag '+getClassTag(g.guideClass)+'">'+esc(g.guideClass)+'</span>':'';var host='';try{if(g.url)host=new URL(g.url).hostname}catch(e){}
-    var isDoc=g.fileType&&g.content;
-    var titleHtml=isDoc?'<span style="cursor:pointer;color:var(--gold-light)" onclick="toggleGuideContent(\''+g.id+'\')">'+esc(g.title)+' <span style="font-size:10px;color:var(--text-muted)">['+esc(g.fileType.toUpperCase())+']</span></span>':'<a class="guide-link" href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title)+'</a>';
-    var contentRow=isDoc?'<tr id="guideContent_'+g.id+'" style="display:none"><td colspan="6"><div style="padding:10px 14px;background:var(--bg-primary);border-radius:6px;margin:4px 0;font-size:12px;color:var(--text-secondary);max-height:200px;overflow-y:auto;white-space:pre-wrap;line-height:1.6">'+esc(g.content.slice(0,500))+(g.content.length>500?'\n\n...（仅显示前500字，共'+g.content.length+'字）':'')+'</div></td></tr>':'';
-    return '<tr><td>'+titleHtml+'</td><td>'+cc+'</td><td>'+(cl||'-')+'</td><td style="color:var(--text-muted);font-size:12px">'+(esc(g.source)||host||'-')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary)" title="'+escAttr(g.notes||'')+'">'+(esc(g.notes)||'')+'</td><td class="actions"><button class="btn-icon btn-edit" onclick="openGuideModal(guides.find(function(x){return x.id===\''+g.id+'\'}))" title="编辑">&#9998;</button><button class="btn-icon" style="color:var(--accent-red)" onclick="deleteGuide(\''+g.id+'\')" title="删除">&#128465;</button></td></tr>'+contentRow}).join('')
-}
-
-function toggleGuideContent(id){
-  var row=document.getElementById('guideContent_'+id);
-  row.style.display=row.style.display==='none'?'':'none';
+    var isDoc=g.fileType&&g.fileData;
+    var titleHtml=isDoc?'<a class="guide-link" href="'+esc(g.fileData)+'" target="_blank" rel="noopener">'+esc(g.title)+' <span style="font-size:10px;color:var(--text-muted)">['+esc(g.fileType.toUpperCase())+']</span></a>':'<a class="guide-link" href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title)+'</a>';
+    return '<tr><td>'+titleHtml+'</td><td>'+cc+'</td><td>'+(cl||'-')+'</td><td style="color:var(--text-muted);font-size:12px">'+(esc(g.source)||host||'-')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary)" title="'+escAttr(g.notes||'')+'">'+(esc(g.notes)||'')+'</td><td class="actions"><button class="btn-icon btn-edit" onclick="openGuideModal(guides.find(function(x){return x.id===\''+g.id+'\'}))" title="编辑">&#9998;</button><button class="btn-icon" style="color:var(--accent-red)" onclick="deleteGuide(\''+g.id+'\')" title="删除">&#128465;</button></td></tr>'}).join('')
 }
 
 // ==================== UPLOAD ====================
@@ -576,23 +570,28 @@ async function handleUploadFile(e){
   var file=files[0],name=file.name;
   var ext=name.split('.').pop().toLowerCase();
   if(['pdf','docx','doc'].indexOf(ext)===-1){toast('仅支持 PDF、DOCX、DOC 格式');return}
-  var st=document.getElementById('uploadStatus');st.style.display='block';st.textContent='正在解析 '+name+' ...';
+  var st=document.getElementById('uploadStatus');st.style.display='block';st.textContent='正在上传 '+name+' ...';
   try{
-    var text='';
+    var ts=Date.now(),storagePath='guides_'+ts+'_'+name;
+    // upload to Supabase Storage
+    var upRes=await supabaseClient.storage.from('guides').upload(storagePath,file);
+    if(upRes.error){throw new Error('上传失败：'+upRes.error.message)}
+    var fileData='https://megymhargmyzdqpgqkrx.supabase.co/storage/v1/object/public/guides/'+storagePath;
+    // extract text for search
+    st.textContent='正在解析文本...';
+    var text='',ab=await file.arrayBuffer();
     if(ext==='pdf'){
-      var ab=await file.arrayBuffer();
       var pdfjsLib=window['pdfjs-dist/build/pdf'];pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       var pdf=await pdfjsLib.getDocument({data:ab}).promise;
       for(var i=1;i<=pdf.numPages;i++){var page=await pdf.getPage(i);var ct=await page.getTextContent();text+=ct.items.map(function(it){return it.str}).join(' ')+'\n'}
     }else{
-      var ab=await file.arrayBuffer();
       var result=await mammoth.extractRawText({arrayBuffer:ab});
       text=result.value;
     }
     var title=document.getElementById('uploadTitle').value.trim()||name.replace(/\.[^.]+$/,'');
-    var g={id:uid('guide'),title:title,url:'',category:'其它',guideClass:'',source:'本地上传',notes:'',content:text,fileType:ext,createdAt:new Date().toISOString()};
+    var g={id:uid('guide'),title:title,url:'',category:'其它',guideClass:'',source:'本地上传',notes:'',content:text,fileType:ext,fileData:fileData,createdAt:new Date().toISOString()};
     guides.unshift(g);saveData();renderAll();closeModal('uploadModal');toast('已导入：'+title)
-  }catch(ex){st.textContent='解析失败：'+ex.message;console.error(ex)}
+  }catch(ex){st.textContent='失败：'+ex.message;console.error(ex)}
 }
 
 // ==================== RAIDS (Card Grid) ====================

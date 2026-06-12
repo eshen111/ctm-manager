@@ -276,7 +276,7 @@ var accounts=[], guides=[], raids=[], valorData={}, customRaids={};
 var guideFilter='', curRaidWeek='', raidWeekFilter='';
 var VALOR_CAP=980;
 
-var SUPABASE_URL='https://megymhargmyzdqpgqkrx.supabase.co',SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZ3ltaGFyZ215emRxcGdxa3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTc1NjMsImV4cCI6MjA5Njc5MzU2M30.lJOobdZY1O4uUVUujpLzWq9wjHEc6CToDMCpixC16XI',supabaseClient=null,dataRowId=null,isRemoteUpdate=false;
+var SUPABASE_URL='https://megymhargmyzdqpgqkrx.supabase.co',SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZ3ltaGFyZ215emRxcGdxa3J4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTIxNzU2MywiZXhwIjoyMDk2NzkzNTYzfQ.F680u6Rpq-VJSLVBx2AnNorrKyOp4xY5LiLvrsMzxho',supabaseClient=null,dataRowId=null,isRemoteUpdate=false;
 if(SUPABASE_URL&&SUPABASE_ANON_KEY)try{supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);dataRowId=localStorage.getItem('wow_data_id')||null}catch(e){}
 
 // ==================== CTM BOSSES ====================
@@ -328,30 +328,45 @@ async function loadRemoteData(){
   // always load local data first as base, then sync with remote
   loadLocalData();
   try{
-    if(dataRowId){
-      var r=await supabaseClient.from('app_data').select('*').eq('id',dataRowId).single();
-      if(r.data){
-        var dd=r.data.data;migrateAllData(dd);
-        // merge: remote wins, but only if it has content
-        var rdAccounts=dd.accounts||[],rdGuides=dd.guides||[],rdRaids=dd.raids||[];
-        var hasRemote=(rdAccounts.length+rdGuides.length+rdRaids.length)>0;
-        var hasLocal=(accounts.length+guides.length+raids.length)>0;
-        if(hasRemote){
+    // query the latest remote row (works across all devices, no localStorage dependency)
+    var r=await supabaseClient.from('app_data').select('*').order('updated_at',{ascending:false}).limit(1).single();
+    if(r.data){
+      dataRowId=r.data.id;localStorage.setItem('wow_data_id',dataRowId);
+      var dd=r.data.data;migrateAllData(dd);
+      var rdAccounts=dd.accounts||[],rdGuides=dd.guides||[],rdRaids=dd.raids||[];
+      var hasRemote=(rdAccounts.length+rdGuides.length+rdRaids.length)>0;
+      var hasLocal=(accounts.length+guides.length+raids.length)>0;
+      if(hasRemote){
+        // merge: remote has data, use it (and merge with local if local also has data)
+        if(hasLocal){
+          accounts=mergeArrays(accounts,rdAccounts);
+          guides=mergeArrays(guides,rdGuides);
+          raids=mergeArrays(raids,rdRaids);
+          for(var k in dd.valorData){valorData[k]=dd.valorData[k]}
+          for(var k in dd.customRaids){customRaids[k]=dd.customRaids[k]}
+        }else{
           accounts=rdAccounts;guides=rdGuides;raids=rdRaids;
           valorData=dd.valorData||{};customRaids=dd.customRaids||{};
-          if(!hasLocal)saveData();
-        }else if(hasLocal){
-          // local has data, remote is empty: push local to remote
-          await syncToRemote();
         }
-        return;
+        saveData();
+      }else if(hasLocal){
+        await syncToRemote();
       }
+      return;
     }
-    // no remote row found, create one with local data (or empty if no local)
+    // no remote row at all, create one with local data
     var d={accounts:accounts,guides:guides,raids:raids,valorData:valorData,customRaids:customRaids};
     var r2=await supabaseClient.from('app_data').insert({data:d}).select().single();
     if(r2.data){dataRowId=r2.data.id;localStorage.setItem('wow_data_id',dataRowId)}
   }catch(e){/* use local data loaded above */}
+}
+
+function mergeArrays(local,remote){
+  var map={},merged=[];
+  local.forEach(function(item){map[item.id]=item});
+  remote.forEach(function(item){map[item.id]=item});
+  for(var k in map)merged.push(map[k]);
+  return merged;
 }
 
 async function syncToRemote(){

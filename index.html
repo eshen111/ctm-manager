@@ -573,10 +573,14 @@ async function handleUploadFile(e){
   var st=document.getElementById('uploadStatus');st.style.display='block';st.textContent='正在上传 '+name+' ...';
   try{
     var ts=Date.now(),storagePath='guides_'+ts+'_'+name;
-    // upload to Supabase Storage
-    var upRes=await supabaseClient.storage.from('guides').upload(storagePath,file);
-    if(upRes.error){throw new Error('上传失败：'+upRes.error.message)}
-    var fileData='https://megymhargmyzdqpgqkrx.supabase.co/storage/v1/object/public/guides/'+storagePath;
+    // upload to Supabase Storage via fetch (bypass supabase-js storage module)
+    var upRes=await fetch(SUPABASE_URL+'/storage/v1/object/guides/'+storagePath,{
+      method:'POST',
+      headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'x-upsert':'false'},
+      body:file
+    });
+    if(!upRes.ok){var errBody=await upRes.text();throw new Error('上传失败 HTTP'+upRes.status+': '+errBody)}
+    var fileData=SUPABASE_URL+'/storage/v1/object/public/guides/'+storagePath;
     // extract text for search
     st.textContent='正在解析文本...';
     var text='',ab=await file.arrayBuffer();

@@ -145,11 +145,59 @@ td.actions{white-space:nowrap;text-align:right}
 .empty-state p{font-size:13px}
 .toast{position:fixed;bottom:24px;right:24px;z-index:1100;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px 20px;font-size:13px;box-shadow:var(--shadow);animation:slideIn .3s ease}
 @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+/* Login Overlay */
+.login-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg-primary);display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:40px 32px;width:100%;max-width:380px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.login-box h2{font-size:24px;font-weight:700;background:linear-gradient(135deg,var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.login-box .login-sub{font-size:13px;color:var(--text-muted);margin-bottom:24px}
+.login-box input{width:100%;padding:10px 14px;font-size:15px;background:var(--bg-primary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);text-align:center;outline:none;transition:border-color .2s;font-family:inherit;letter-spacing:4px}
+.login-box input:focus{border-color:var(--gold-muted)}
+.login-box input.shake{border-color:var(--accent-red);animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.login-box .btn-login{margin-top:16px;width:100%;padding:10px;font-size:15px;font-weight:700;background:linear-gradient(135deg,var(--gold-muted),var(--gold));color:#fff;border:none;border-radius:6px;cursor:pointer;transition:filter .2s;font-family:inherit}
+.login-box .btn-login:hover{filter:brightness(1.15)}
+/* Collapsible Panel */
+.collapse-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.collapse-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;background:var(--bg-secondary);border-bottom:1px solid transparent;transition:background .2s;user-select:none}
+.collapse-header:hover{background:var(--bg-hover)}
+.collapse-header .ch-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.collapse-header .ch-arrow{font-size:12px;transition:transform .25s ease;color:var(--text-muted)}
+.collapse-header .ch-total{font-size:13px;font-weight:600;color:var(--gold-light)}
+.collapse-body{padding:6px 16px 14px;display:block}
+.collapse-panel.collapsed .collapse-body{display:none}
+.collapse-panel.collapsed .collapse-header{border-bottom-color:transparent}
+.collapse-panel.collapsed .ch-arrow{transform:rotate(-90deg)}
+.valor-table{width:100%;border-collapse:collapse;font-size:13px}
+.valor-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.valor-table tr:last-child td{border-bottom:none}
+.valor-table .v-char{font-weight:600}
+.valor-table .v-val{text-align:center;cursor:pointer;color:var(--gold-light);font-weight:600;font-family:'SFMono-Regular',Consolas,monospace}
+.valor-table .v-val:hover{text-decoration:underline}
+.valor-table .v-bar{width:100%;min-width:80px}
+/* Upload */
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:12px}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--gold-muted);background:rgba(200,161,63,.05)}
+.upload-zone .uz-icon{font-size:36px;margin-bottom:8px;opacity:.6}
+.upload-zone .uz-text{font-size:13px;color:var(--text-secondary)}
+.upload-zone .uz-hint{font-size:11px;color:var(--text-muted);margin-top:4px}
 @media(max-width:768px){.raid-grid{grid-template-columns:1fr}.header{padding:12px 14px}.header h1{font-size:16px}.tabs{padding:0 8px}.tab-btn{padding:10px 12px;font-size:13px}.main{padding:14px 10px}.form-row{grid-template-columns:1fr}.data-bar{gap:8px}.stat-card{min-width:80px;padding:10px 14px}.stat-card .stat-value{font-size:20px}th,td{padding:8px 10px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
 </head>
 <body>
+
+<!-- ===== LOGIN OVERLAY ===== -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div style="font-size:40px;margin-bottom:8px">&#9876;</div>
+    <h2>艾泽拉斯战纪</h2>
+    <div class="login-sub">CTM 4.3.4 私服管家 · 请输入密码</div>
+    <input id="loginInput" type="password" placeholder="输入访问密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-login" onclick="doLogin()">进入</button>
+  </div>
+</div>
 <div class="header">
   <div class="header-left"><div class="header-icon">&#9876;</div><div><h1>艾泽拉斯战纪</h1></div></div>
   <div class="header-actions">
@@ -170,13 +218,13 @@ td.actions{white-space:nowrap;text-align:right}
 <div class="tab-content active" id="tab-accounts">
   <div class="toolbar"><div class="toolbar-left"><h2>角色与账号</h2></div><button class="btn btn-gold" onclick="openAccountModal()">+ 添加角色</button></div>
   <div class="data-bar" id="accountsStats"></div>
-  <div class="table-wrap"><table><thead><tr><th>账号</th><th>密码</th><th>角色名</th><th>职业</th><th>阵营</th><th>等级</th><th>装等</th><th>专业</th><th>备注</th><th style="width:80px">操作</th></tr></thead><tbody id="accountsBody"></tbody></table></div>
+  <div class="table-wrap"><table><thead><tr><th>账号</th><th>密码</th><th>角色名</th><th>职业</th><th>种族</th><th>天赋</th><th>阵营</th><th>等级</th><th>装等</th><th>专业</th><th>备注</th><th style="width:80px">操作</th></tr></thead><tbody id="accountsBody"></tbody></table></div>
   <div id="accountsEmpty" class="empty-state"><div class="empty-icon">&#128100;</div><h3>还没有角色信息</h3><p>点击上方"添加角色"开始记录</p></div>
 </div>
 
 <!-- ===== GUIDES ===== -->
 <div class="tab-content" id="tab-guides">
-  <div class="toolbar"><div class="toolbar-left"><h2>攻略收藏</h2></div><button class="btn btn-gold" onclick="openGuideModal()">+ 添加攻略</button></div>
+  <div class="toolbar"><div class="toolbar-left"><h2>攻略收藏</h2></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="openUploadModal()">上传文档</button><button class="btn btn-gold" onclick="openGuideModal()">+ 添加攻略</button></div></div>
   <div class="filter-tabs" id="guideFilterTabs">
     <span class="filter-tab cat-all active" data-cat="" onclick="filterGuides('')">全部</span>
     <span class="filter-tab cat-zhiye" data-cat="职业攻略" onclick="filterGuides('职业攻略')">职业攻略</span>
@@ -209,6 +257,15 @@ td.actions{white-space:nowrap;text-align:right}
     </div>
   </div>
   <div class="data-bar" id="raidsStats"></div>
+  <div class="collapse-panel" id="valorPanel">
+    <div class="collapse-header" onclick="toggleValorPanel()">
+      <div class="ch-title"><span class="ch-arrow">&#9660;</span> 勇气点数</div>
+      <div class="ch-total" id="valorTotal"></div>
+    </div>
+    <div class="collapse-body">
+      <table class="valor-table"><tbody id="valorTableBody"></tbody></table>
+    </div>
+  </div>
   <div class="raid-grid" id="raidsGrid"></div>
   <div id="raidsEmpty" class="empty-state"><div class="empty-icon">&#9876;</div><h3>还没有副本记录</h3><p>点击上方"记录进度"开始追踪你的副本完成情况</p></div>
 </div>
@@ -220,7 +277,8 @@ td.actions{white-space:nowrap;text-align:right}
   <div class="modal"><div class="modal-header"><h3 id="accountModalTitle">添加角色</h3><button class="btn-icon" onclick="closeModal('accountModal')">&times;</button></div>
   <div class="modal-body">
     <div class="form-row"><div class="form-group"><label>账号名</label><input id="accUsername" placeholder="登录账号"></div><div class="form-group"><label>密码</label><input id="accPassword" type="password" placeholder="密码"></div></div>
-    <div class="form-row"><div class="form-group"><label>角色名</label><input id="accCharName" placeholder="角色名称"></div><div class="form-group"><label>职业</label><select id="accClass"><option value="">选择职业</option><option value="战士">战士</option><option value="圣骑士">圣骑士</option><option value="猎人">猎人</option><option value="潜行者">潜行者</option><option value="牧师">牧师</option><option value="死亡骑士">死亡骑士</option><option value="萨满祭司">萨满祭司</option><option value="法师">法师</option><option value="术士">术士</option><option value="德鲁伊">德鲁伊</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label>角色名</label><input id="accCharName" placeholder="角色名称"></div><div class="form-group"><label>职业</label><select id="accClass" onchange="onClassChange(this)"><option value="">选择职业</option><option value="战士">战士</option><option value="圣骑士">圣骑士</option><option value="猎人">猎人</option><option value="潜行者">潜行者</option><option value="牧师">牧师</option><option value="死亡骑士">死亡骑士</option><option value="萨满祭司">萨满祭司</option><option value="法师">法师</option><option value="术士">术士</option><option value="德鲁伊">德鲁伊</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label>种族</label><select id="accRace"><option value="">选择种族</option><optgroup label="联盟"><option value="人类">人类</option><option value="矮人">矮人</option><option value="暗夜精灵">暗夜精灵</option><option value="侏儒">侏儒</option><option value="德莱尼">德莱尼</option><option value="狼人">狼人</option></optgroup><optgroup label="部落"><option value="兽人">兽人</option><option value="被遗忘者">被遗忘者</option><option value="牛头人">牛头人</option><option value="巨魔">巨魔</option><option value="血精灵">血精灵</option><option value="地精">地精</option></optgroup></select></div><div class="form-group"><label>天赋</label><select id="accTalent"><option value="">先选择职业</option></select></div></div>
     <div class="form-row"><div class="form-group"><label>阵营</label><select id="accFaction"><option value="">选择阵营</option><option value="部落">部落</option><option value="联盟">联盟</option></select></div><div class="form-group"><label>等级</label><input id="accLevel" type="number" min="1" max="85" placeholder="85"></div></div>
     <div class="form-row"><div class="form-group"><label>装等</label><input id="accIlvl" type="number" step="0.1" placeholder="如 397"></div><div class="form-group"><label>专业</label><input id="accProfs" placeholder="如 采矿/工程"></div></div>
     <div class="form-group"><label>备注</label><textarea id="accNotes" placeholder="装备、橙杖进度等补充信息"></textarea></div>
@@ -268,6 +326,21 @@ td.actions{white-space:nowrap;text-align:right}
       <button class="btn btn-gold btn-sm" onclick="addCustomRaid()">添加副本</button>
     </div>
   </div><div class="modal-footer"><button class="btn" onclick="closeModal('customRaidModal')">关闭</button></div></div>
+</div>
+
+<!-- ===== UPLOAD MODAL ===== -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal"><div class="modal-header"><h3>上传文档</h3><button class="btn-icon" onclick="closeModal('uploadModal')">&times;</button></div>
+  <div class="modal-body">
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('uploadInput').click()">
+      <div class="uz-icon">&#128196;</div>
+      <div class="uz-text">点击此处选择文件，或将文件拖拽到此处</div>
+      <div class="uz-hint">支持 PDF、DOCX、DOC 格式</div>
+    </div>
+    <input type="file" id="uploadInput" accept=".pdf,.docx,.doc" style="display:none" onchange="handleUploadFile(event)">
+    <div id="uploadStatus" style="text-align:center;font-size:13px;color:var(--text-muted);display:none;padding:12px"></div>
+    <div class="form-group"><label>标题（可选，留空使用文件名）</label><input id="uploadTitle" placeholder="攻略标题"></div>
+  </div><div class="modal-footer"><button class="btn" onclick="closeModal('uploadModal')">取消</button></div></div>
 </div>
 
 <script>
@@ -388,30 +461,78 @@ var CLASS_TAGS={'战士':'tag-warrior','圣骑士':'tag-paladin','猎人':'tag-h
 function getClassTag(c){return CLASS_TAGS[c]||'tag-default'}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 
+// ==================== TALENTS ====================
+var TALENTS={
+  '战士':['武器','狂怒','防护'],'圣骑士':['神圣','防护','惩戒'],
+  '猎人':['兽王','射击','生存'],'潜行者':['刺杀','战斗','敏锐'],
+  '牧师':['戒律','神圣','暗影'],'死亡骑士':['鲜血','冰霜','邪恶'],
+  '萨满祭司':['元素','增强','恢复'],'法师':['奥术','火焰','冰霜'],
+  '术士':['痛苦','恶魔','毁灭'],'德鲁伊':['平衡','野性','恢复']
+};
+function onClassChange(sel){
+  var cls=sel.value,talSel=document.getElementById('accTalent');
+  talSel.innerHTML=cls&&TALENTS[cls]?'<option value="">选择天赋</option>'+TALENTS[cls].map(function(t){return '<option value="'+t+'">'+t+'</option>'}).join(''):'<option value="">先选择职业</option>';
+}
+
+// ==================== LOGIN ====================
+function doLogin(){
+  var input=document.getElementById('loginInput'),val=input.value;
+  if(val==='11111111'){
+    localStorage.setItem('wow_ctm_auth','1');
+    document.getElementById('loginOverlay').style.display='none';
+  }else{
+    input.classList.add('shake');
+    setTimeout(function(){input.classList.remove('shake')},400);
+    input.value='';input.focus();
+  }
+}
+
 // ==================== UI ====================
 function switchTab(n){document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active')});document.querySelector('.tab-btn[data-tab="'+n+'"]').classList.add('active');document.getElementById('tab-'+n).classList.add('active')}
-function openModal(id){document.getElementById(id).classList.add('open')}
+function openModal(id){document.getElementById(id).classList.add('open');if(id==='uploadModal')initUploadZone()}
 document.querySelectorAll('.modal-overlay').forEach(function(el){el.addEventListener('click',function(e){if(e.target===el)el.classList.remove('open')})})
 document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(function(m){m.classList.remove('open')})})
+function initUploadZone(){
+  var zone=document.getElementById('uploadZone'),input=document.getElementById('uploadInput');
+  ['dragenter','dragover','dragleave','drop'].forEach(function(evt){
+    zone.addEventListener(evt,function(e){e.preventDefault();e.stopPropagation()});
+  });
+  ['dragenter','dragover'].forEach(function(evt){zone.addEventListener(evt,function(){zone.classList.add('dragover')})});
+  ['dragleave','drop'].forEach(function(evt){zone.addEventListener(evt,function(){zone.classList.remove('dragover')})});
+  zone.addEventListener('drop',function(e){input.files=e.dataTransfer.files;handleUploadFile({target:input})});
+}
 
 // ==================== ACCOUNTS ====================
 function openAccountModal(d){
   document.getElementById('accEditId').value=d?d.id:'';document.getElementById('accountModalTitle').textContent=d?'编辑角色':'添加角色';
   document.getElementById('accUsername').value=d?d.username:'';document.getElementById('accPassword').value=d?d.password:'';
   document.getElementById('accCharName').value=d?d.charName:'';document.getElementById('accClass').value=d?d.class:'';
-  document.getElementById('accFaction').value=d?d.faction:'';document.getElementById('accLevel').value=d?d.level:'';
+  document.getElementById('accRace').value=d?d.race:'';document.getElementById('accFaction').value=d?d.faction:'';
+  document.getElementById('accLevel').value=d?d.level:'';
   document.getElementById('accIlvl').value=d?d.ilvl:'';document.getElementById('accProfs').value=d?d.profs:'';
-  document.getElementById('accNotes').value=d?d.notes:'';openModal('accountModal')
+  document.getElementById('accNotes').value=d?d.notes:'';
+  // populate talents based on class
+  onClassChange({value:d?d.class:''});
+  if(d&&d.talent)document.getElementById('accTalent').value=d.talent;
+  openModal('accountModal')
 }
 function saveAccount(){
   var id=document.getElementById('accEditId').value;
-  var e={username:document.getElementById('accUsername').value.trim(),password:document.getElementById('accPassword').value,charName:document.getElementById('accCharName').value.trim(),class:document.getElementById('accClass').value,faction:document.getElementById('accFaction').value,level:document.getElementById('accLevel').value,ilvl:document.getElementById('accIlvl').value,profs:document.getElementById('accProfs').value.trim(),notes:document.getElementById('accNotes').value.trim()};
+  var e={username:document.getElementById('accUsername').value.trim(),password:document.getElementById('accPassword').value,charName:document.getElementById('accCharName').value.trim(),class:document.getElementById('accClass').value,race:document.getElementById('accRace').value,talent:document.getElementById('accTalent').value,faction:document.getElementById('accFaction').value,level:document.getElementById('accLevel').value,ilvl:document.getElementById('accIlvl').value,profs:document.getElementById('accProfs').value.trim(),notes:document.getElementById('accNotes').value.trim()};
   if(!e.charName){alert('请输入角色名');return}
   if(id){var i=accounts.findIndex(function(a){return a.id===id});if(i!==-1){e.id=id;accounts[i]=e}}
   else{e.id=uid('acc');accounts.push(e)}
   saveData();renderAll();closeModal('accountModal')
 }
 function deleteAccount(id){if(!confirm('确定删除该角色信息？'))return;accounts=accounts.filter(function(a){return a.id!==id});saveData();renderAll()}
+// ==================== LEAGUE RACES ====================
+var ALLIANCE_RACES={人类:1,矮人:1,暗夜精灵:1,侏儒:1,德莱尼:1,狼人:1},HORDE_RACES={兽人:1,被遗忘者:1,牛头人:1,巨魔:1,血精灵:1,地精:1};
+function getRaceStyle(race){
+  if(ALLIANCE_RACES[race])return 'color:#0055b3';
+  if(HORDE_RACES[race])return 'color:#b30000';
+  return '';
+}
+
 function renderAccounts(){
   var tb=document.getElementById('accountsBody'),em=document.getElementById('accountsEmpty'),bg=document.getElementById('accountsBadge'),tw=document.querySelector('#tab-accounts .table-wrap');
   bg.textContent=accounts.length;
@@ -421,7 +542,7 @@ function renderAccounts(){
   var ho=accounts.filter(function(a){return a.faction==='部落'}).length,al=accounts.filter(function(a){return a.faction==='联盟'}).length;
   document.getElementById('accountsStats').innerHTML='<div class="stat-card"><div class="stat-value">'+accounts.length+'</div><div class="stat-label">总角色</div></div><div class="stat-card"><div class="stat-value">'+ml+'</div><div class="stat-label">满级</div></div><div class="stat-card"><div class="stat-value">'+hi+'</div><div class="stat-label">397+ 装等</div></div><div class="stat-card"><div class="stat-value">'+ho+'/'+al+'</div><div class="stat-label">部落/联盟</div></div>';
   tb.innerHTML=accounts.map(function(a){
-    return '<tr><td>'+(esc(a.username)||'-')+'</td><td><div class="pwd-wrap"><span class="pwd-value pwd-hidden" onclick="togglePwd(this)">'+(esc(a.password)||'-')+'</span><button class="btn-icon" style="font-size:12px" onclick="togglePwd(this.parentNode.querySelector(\'.pwd-value\'))">&#128065;</button></div></td><td><strong>'+esc(a.charName)+'</strong></td><td>'+(a.class?'<span class="class-tag '+getClassTag(a.class)+'">'+esc(a.class)+'</span>':'-')+'</td><td style="'+(a.faction==='部落'?'color:#b30000':'color:#0055b3')+'">'+(esc(a.faction)||'-')+'</td><td>'+(a.level||'-')+'</td><td>'+(a.ilvl||'-')+'</td><td>'+(esc(a.profs)||'-')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escAttr(a.notes||'')+'">'+(esc(a.notes)||'-')+'</td><td class="actions"><button class="btn-icon btn-edit" onclick="openAccountModal(accounts.find(function(x){return x.id===\''+a.id+'\'}))" title="编辑">&#9998;</button><button class="btn-icon" style="color:var(--accent-red)" onclick="deleteAccount(\''+a.id+'\')" title="删除">&#128465;</button></td></tr>'
+    return '<tr><td>'+(esc(a.username)||'-')+'</td><td><div class="pwd-wrap"><span class="pwd-value pwd-hidden" onclick="togglePwd(this)">'+(esc(a.password)||'-')+'</span><button class="btn-icon" style="font-size:12px" onclick="togglePwd(this.parentNode.querySelector(\'.pwd-value\'))">&#128065;</button></div></td><td><strong>'+esc(a.charName)+'</strong></td><td>'+(a.class?'<span class="class-tag '+getClassTag(a.class)+'">'+esc(a.class)+'</span>':'-')+'</td><td style="'+getRaceStyle(a.race)+'">'+(esc(a.race)||'-')+'</td><td>'+(esc(a.talent)||'-')+'</td><td style="'+(a.faction==='部落'?'color:#b30000':'color:#0055b3')+'">'+(esc(a.faction)||'-')+'</td><td>'+(a.level||'-')+'</td><td>'+(a.ilvl||'-')+'</td><td>'+(esc(a.profs)||'-')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escAttr(a.notes||'')+'">'+(esc(a.notes)||'-')+'</td><td class="actions"><button class="btn-icon btn-edit" onclick="openAccountModal(accounts.find(function(x){return x.id===\''+a.id+'\'}))" title="编辑">&#9998;</button><button class="btn-icon" style="color:var(--accent-red)" onclick="deleteAccount(\''+a.id+'\')" title="删除">&#128465;</button></td></tr>'
   }).join('')
 }
 
@@ -436,7 +557,42 @@ function renderGuides(){
   if(!filtered.length&&!guideFilter){tb.innerHTML='';em.style.display='block';tw.style.display='none';return}
   em.style.display='none';tw.style.display='block';
   var catColors={'职业攻略':'#6aa0e0','副本攻略':'#e87070','PVP':'#b080d0','专业/赚钱':'#e8a050','成就/收集':'#50c0b0','插件/宏':'#e0d050','其它':'var(--text-muted)'};
-  tb.innerHTML=filtered.map(function(g){var cc=g.category?'<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:'+(catColors[g.category]||'var(--text-muted)')+';color:#000;font-size:11px;font-weight:600">'+esc(g.category)+'</span>':'';var cl=g.guideClass?'<span class="class-tag '+getClassTag(g.guideClass)+'">'+esc(g.guideClass)+'</span>':'';var host='';try{if(g.url)host=new URL(g.url).hostname}catch(e){}return '<tr><td><a class="guide-link" href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title)+'</a></td><td>'+cc+'</td><td>'+(cl||'-')+'</td><td style="color:var(--text-muted);font-size:12px">'+(esc(g.source)||host||'-')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary)" title="'+escAttr(g.notes||'')+'">'+(esc(g.notes)||'')+'</td><td class="actions"><button class="btn-icon btn-edit" onclick="openGuideModal(guides.find(function(x){return x.id===\''+g.id+'\'}))" title="编辑">&#9998;</button><button class="btn-icon" style="color:var(--accent-red)" onclick="deleteGuide(\''+g.id+'\')" title="删除">&#128465;</button></td></tr>'}).join('')
+  tb.innerHTML=filtered.map(function(g){var cc=g.category?'<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:'+(catColors[g.category]||'var(--text-muted)')+';color:#000;font-size:11px;font-weight:600">'+esc(g.category)+'</span>':'';var cl=g.guideClass?'<span class="class-tag '+getClassTag(g.guideClass)+'">'+esc(g.guideClass)+'</span>':'';var host='';try{if(g.url)host=new URL(g.url).hostname}catch(e){}
+    var isDoc=g.fileType&&g.content;
+    var titleHtml=isDoc?'<span style="cursor:pointer;color:var(--gold-light)" onclick="toggleGuideContent(\''+g.id+'\')">'+esc(g.title)+' <span style="font-size:10px;color:var(--text-muted)">['+esc(g.fileType.toUpperCase())+']</span></span>':'<a class="guide-link" href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title)+'</a>';
+    var contentRow=isDoc?'<tr id="guideContent_'+g.id+'" style="display:none"><td colspan="6"><div style="padding:10px 14px;background:var(--bg-primary);border-radius:6px;margin:4px 0;font-size:12px;color:var(--text-secondary);max-height:200px;overflow-y:auto;white-space:pre-wrap;line-height:1.6">'+esc(g.content.slice(0,500))+(g.content.length>500?'\n\n...（仅显示前500字，共'+g.content.length+'字）':'')+'</div></td></tr>':'';
+    return '<tr><td>'+titleHtml+'</td><td>'+cc+'</td><td>'+(cl||'-')+'</td><td style="color:var(--text-muted);font-size:12px">'+(esc(g.source)||host||'-')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary)" title="'+escAttr(g.notes||'')+'">'+(esc(g.notes)||'')+'</td><td class="actions"><button class="btn-icon btn-edit" onclick="openGuideModal(guides.find(function(x){return x.id===\''+g.id+'\'}))" title="编辑">&#9998;</button><button class="btn-icon" style="color:var(--accent-red)" onclick="deleteGuide(\''+g.id+'\')" title="删除">&#128465;</button></td></tr>'+contentRow}).join('')
+}
+
+function toggleGuideContent(id){
+  var row=document.getElementById('guideContent_'+id);
+  row.style.display=row.style.display==='none'?'':'none';
+}
+
+// ==================== UPLOAD ====================
+function openUploadModal(){document.getElementById('uploadTitle').value='';document.getElementById('uploadStatus').style.display='none';document.getElementById('uploadInput').value='';openModal('uploadModal')}
+async function handleUploadFile(e){
+  var files=e.target.files;if(!files||!files.length)return;
+  var file=files[0],name=file.name;
+  var ext=name.split('.').pop().toLowerCase();
+  if(['pdf','docx','doc'].indexOf(ext)===-1){toast('仅支持 PDF、DOCX、DOC 格式');return}
+  var st=document.getElementById('uploadStatus');st.style.display='block';st.textContent='正在解析 '+name+' ...';
+  try{
+    var text='';
+    if(ext==='pdf'){
+      var ab=await file.arrayBuffer();
+      var pdfjsLib=window['pdfjs-dist/build/pdf'];pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      var pdf=await pdfjsLib.getDocument({data:ab}).promise;
+      for(var i=1;i<=pdf.numPages;i++){var page=await pdf.getPage(i);var ct=await page.getTextContent();text+=ct.items.map(function(it){return it.str}).join(' ')+'\n'}
+    }else{
+      var ab=await file.arrayBuffer();
+      var result=await mammoth.extractRawText({arrayBuffer:ab});
+      text=result.value;
+    }
+    var title=document.getElementById('uploadTitle').value.trim()||name.replace(/\.[^.]+$/,'');
+    var g={id:uid('guide'),title:title,url:'',category:'其它',guideClass:'',source:'本地上传',notes:'',content:text,fileType:ext,createdAt:new Date().toISOString()};
+    guides.unshift(g);saveData();renderAll();closeModal('uploadModal');toast('已导入：'+title)
+  }catch(ex){st.textContent='解析失败：'+ex.message;console.error(ex)}
 }
 
 // ==================== RAIDS (Card Grid) ====================
@@ -495,23 +651,33 @@ function renderRaids(){
   var allRaids=raidWeekFilter?filtered:raids;
   var dr=allRaids.filter(function(r){return r.status==='done'}).length;
   var pr=allRaids.filter(function(r){return r.status==='partial'}).length;
-  document.getElementById('raidsStats').innerHTML='<div class="stat-card"><div class="stat-value">'+allRaids.length+'</div><div class="stat-label">副本记录</div></div><div class="stat-card"><div class="stat-value">'+dr+'</div><div class="stat-label">已全通</div></div><div class="stat-card"><div class="stat-value">'+pr+'</div><div class="stat-label">进行中</div></div>'+valorCards();
+  document.getElementById('raidsStats').innerHTML='<div class="stat-card"><div class="stat-value">'+allRaids.length+'</div><div class="stat-label">副本记录</div></div><div class="stat-card"><div class="stat-value">'+dr+'</div><div class="stat-label">已全通</div></div><div class="stat-card"><div class="stat-value">'+pr+'</div><div class="stat-label">进行中</div></div>';
+  renderValorPanel();
 }
 
-function valorCards(){
+function renderValorPanel(){
   var names=accounts.filter(function(a){return a.charName}).map(function(a){return a.charName});
-  return names.map(function(cn){
+  if(!names.length){document.getElementById('valorPanel').style.display='none';return}
+  document.getElementById('valorPanel').style.display='';
+  var tbody=document.getElementById('valorTableBody'),total=0;
+  tbody.innerHTML=names.map(function(cn){
     var v=valorData[cn]||{current:0,cap:VALOR_CAP};
+    total+=v.current;
     var vpct=Math.min(100,Math.round(v.current/v.cap*100));
-    return '<div class="stat-card valor-card" onclick="editValor(\''+escAttr(cn)+'\')" title="点击修改 '+esc(cn)+' 的勇气点数"><div class="stat-label" style="margin-bottom:4px">'+esc(cn)+' 勇气</div><div class="stat-value" style="font-size:20px;color:'+(v.current>=v.cap?'var(--accent-green)':'var(--gold-light)')+'">'+v.current+' / '+v.cap+'</div><div class="progress-bar" style="margin-top:6px"><div class="progress-track"><div class="progress-fill'+(v.current>=v.cap?' done':'')+'" style="width:'+vpct+'%"></div></div></div></div>';
+    return '<tr><td class="v-char">'+esc(cn)+'</td><td class="v-val" onclick="editValorRow(\''+escAttr(cn)+'\')">'+v.current+'</td><td style="text-align:center;color:var(--text-muted)">'+v.cap+'</td><td class="v-bar"><div class="progress-bar"><div class="progress-track"><div class="progress-fill'+(v.current>=v.cap?' done':'')+'" style="width:'+vpct+'%"></div></div></div></td></tr>';
   }).join('');
+  document.getElementById('valorTotal').textContent='本周总和：'+total;
 }
 
-function editValor(cn){
+function editValorRow(cn){
   var v=valorData[cn]||{current:0,cap:VALOR_CAP};
   var nc=prompt(cn+' 当前勇气点数：',v.current);if(nc===null)return;nc=parseInt(nc)||0;
   var ncap=prompt(cn+' 勇气上限：',v.cap);if(ncap===null)return;ncap=parseInt(ncap)||VALOR_CAP;
   valorData[cn]={current:Math.min(nc,ncap),cap:ncap};saveData();renderAll()
+}
+
+function toggleValorPanel(){
+  document.getElementById('valorPanel').classList.toggle('collapsed');
 }
 
 function openRaidModal(d){
@@ -568,6 +734,8 @@ function renderAll(){renderAccounts();renderGuides();renderRaids()}
 
 // ==================== INIT ====================
 async function init(){
+  if(localStorage.getItem('wow_ctm_auth')==='1'){document.getElementById('loginOverlay').style.display='none'}
+  else{document.getElementById('loginInput').focus();return}
   if(supabaseClient){await loadRemoteData()}else{loadLocalData()}
   initWeek();renderAll()
 }

@@ -167,13 +167,13 @@ td.actions{white-space:nowrap;text-align:right}
 .collapse-panel.collapsed .collapse-body{display:none}
 .collapse-panel.collapsed .collapse-header{border-bottom-color:transparent}
 .collapse-panel.collapsed .ch-arrow{transform:rotate(-90deg)}
-.valor-table{width:100%;border-collapse:collapse;font-size:13px}
-.valor-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
-.valor-table tr:last-child td{border-bottom:none}
-.valor-table .v-char{font-weight:600}
-.valor-table .v-val{text-align:center;cursor:pointer;color:var(--gold-light);font-weight:600;font-family:'SFMono-Regular',Consolas,monospace}
-.valor-table .v-val:hover{text-decoration:underline}
-.valor-table .v-bar{width:100%;min-width:80px}
+.valor-grid{display:flex;flex-wrap:wrap;gap:8px 16px}
+.valor-row{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg-secondary);border-radius:6px;border:1px solid var(--border);font-size:13px;white-space:nowrap}
+.valor-row .vr-char{font-weight:600;display:flex;align-items:center;gap:4px}
+.valor-row .vr-class{font-size:11px;opacity:.7}
+.valor-row .vr-num{cursor:pointer;color:var(--gold-light);font-weight:600;font-family:'SFMono-Regular',Consolas,monospace;min-width:36px;text-align:right}
+.valor-row .vr-num:hover{text-decoration:underline}
+.valor-row .vr-bar{width:60px;height:6px}
 /* Upload */
 .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:12px}
 .upload-zone:hover,.upload-zone.dragover{border-color:var(--gold-muted);background:rgba(200,161,63,.05)}
@@ -263,7 +263,7 @@ td.actions{white-space:nowrap;text-align:right}
       <div class="ch-total" id="valorTotal"></div>
     </div>
     <div class="collapse-body">
-      <table class="valor-table"><tbody id="valorTableBody"></tbody></table>
+      <div class="valor-grid" id="valorGrid"></div>
     </div>
   </div>
   <div class="raid-grid" id="raidsGrid"></div>
@@ -572,7 +572,8 @@ async function handleUploadFile(e){
   if(['pdf','docx','doc'].indexOf(ext)===-1){toast('仅支持 PDF、DOCX、DOC 格式');return}
   var st=document.getElementById('uploadStatus');st.style.display='block';st.textContent='正在上传 '+name+' ...';
   try{
-    var ts=Date.now(),safeName=name.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9\u4e00-\u9fff._-]/g,'');
+    var ts=Date.now(),safeName=name.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9!_.*'()\/-]/g,'').replace(/^[_.-]+|[_.-]+$/g,'');
+    if(!safeName)safeName='file';
     var storagePath='guides_'+ts+'_'+safeName;
     var encodedPath=encodeURIComponent(storagePath);
     // upload to Supabase Storage via fetch (bypass supabase-js storage module)
@@ -661,20 +662,21 @@ function renderRaids(){
 }
 
 function renderValorPanel(){
-  var names=accounts.filter(function(a){return a.charName}).map(function(a){return a.charName});
-  if(!names.length){document.getElementById('valorPanel').style.display='none';return}
+  var accs=accounts.filter(function(a){return a.charName});
+  if(!accs.length){document.getElementById('valorPanel').style.display='none';return}
   document.getElementById('valorPanel').style.display='';
-  var tbody=document.getElementById('valorTableBody'),total=0;
-  tbody.innerHTML=names.map(function(cn){
-    var v=valorData[cn]||{current:0,cap:VALOR_CAP};
+  var grid=document.getElementById('valorGrid'),total=0;
+  grid.innerHTML=accs.map(function(a){
+    var v=valorData[a.charName]||{current:0,cap:VALOR_CAP};
     total+=v.current;
     var vpct=Math.min(100,Math.round(v.current/v.cap*100));
-    return '<tr><td class="v-char">'+esc(cn)+'</td><td class="v-val" onclick="editValorRow(\''+escAttr(cn)+'\')">'+v.current+'</td><td style="text-align:center;color:var(--text-muted)">'+v.cap+'</td><td class="v-bar"><div class="progress-bar"><div class="progress-track"><div class="progress-fill'+(v.current>=v.cap?' done':'')+'" style="width:'+vpct+'%"></div></div></div></td></tr>';
+    return '<div class="valor-row" onclick="editValorRow(\''+escAttr(a.charName)+'\',event)"><span class="vr-char">'+esc(a.charName)+(a.class?'<span class="vr-class">'+esc(a.class)+'</span>':'')+'</span><span class="vr-num">'+v.current+'</span><span style="font-size:11px;color:var(--text-muted)">/'+v.cap+'</span><div class="progress-bar vr-bar"><div class="progress-track"><div class="progress-fill'+(v.current>=v.cap?' done':'')+'" style="width:'+vpct+'%"></div></div></div></div>';
   }).join('');
   document.getElementById('valorTotal').textContent='本周总和：'+total;
 }
 
-function editValorRow(cn){
+function editValorRow(cn,e){
+  if(e)e.stopPropagation();
   var v=valorData[cn]||{current:0,cap:VALOR_CAP};
   var nc=prompt(cn+' 当前勇气点数：',v.current);if(nc===null)return;nc=parseInt(nc)||0;
   var ncap=prompt(cn+' 勇气上限：',v.cap);if(ncap===null)return;ncap=parseInt(ncap)||VALOR_CAP;

@@ -680,13 +680,13 @@ function renderDashboardStats(){
   var wkBossTotal=wkKills.reduce(function(s,b){return s+(b.killed||Object.keys(b.bosses||{}).filter(function(k){return b.bosses[k].done}).length)},0);
   // 全通统计
   var fullClear=battleLogs.filter(function(b){return b.killed===b.totalBosses&&b.totalBosses>0}).length;
-  // 勇气总值
-  var valorTotal=0;for(var k in valorData){valorTotal+=(valorData[k]||0)}
+  // 本周满勇气账号数
+  var valorFull=accounts.filter(function(a){var v=valorData[a.charName];return v&&v.current>=v.cap}).length;
   ds.innerHTML=[
     {v:accounts.length,l:'总角色'},
     {v:wkBossTotal,l:'本周击杀'},
     {v:fullClear,l:'全通记录'},
-    {v:valorTotal,l:'勇气总分'},
+    {v:valorFull,l:'满勇气角色'},
     {v:guides.length,l:'攻略收藏'}
   ].map(function(s,i){return '<div class="dash-stat'+(i<2?' highlight':'')+'"><div class="dash-stat-val">'+s.v+'</div><div class="dash-stat-label">'+s.l+'</div></div>'}).join('');
 }
@@ -714,10 +714,10 @@ function renderDashboardCharCards(){
     if(b.killed===b.totalBosses&&b.totalBosses>0)charKills[b.charName].full++;
   }});
   cc.innerHTML=accounts.map(function(a){
+    var vd=valorData[a.charName];var v=vd?vd.current:0;
     var wk=charKills[a.charName];
     var wkHtml=wk?'<div class="cc-week"><div class="cc-week-row"><span>本周击杀</span><span>'+wk.bosses+' BOSS</span></div><div class="cc-week-row"><span>全通</span><span>'+wk.full+' 次</span></div></div>':'<div class="cc-week" style="color:var(--text-muted);font-style:italic">本周暂无击杀</div>';
-    var v=valorData[a.charName]||0;
-    return '<div class="dash-char-card" onclick="openAccountModal(accounts.find(function(x){return x.id===\''+a.id+'\'}))"><div class="cc-top"><span class="cc-name"><span class="class-tag '+getClassTag(a.class)+'">'+esc(a.class)+'</span> '+esc(a.charName)+'</span><span class="cc-ilvl">'+esc(a.ilvl||'?')+'</span></div><div class="cc-meta">'+(esc(a.faction)||'&mdash;')+' · Lv '+esc(a.level||'?')+' · '+esc(a.talent||'&mdash;')+' · 勇气 '+v+'</div>'+wkHtml+'</div>';
+    return '<div class="dash-char-card" onclick="openAccountModal(accounts.find(function(x){return x.id===\''+a.id+'\'}))"><div class="cc-top"><span class="cc-name"><span class="class-tag '+getClassTag(a.class)+'">'+esc(a.class)+'</span> '+esc(a.charName)+'</span><span class="cc-ilvl">'+esc(a.ilvl||'?')+' · <span style="color:var(--gold-light)">'+v+'\u52C7\u6C14</span></span></div><div class="cc-meta">'+(esc(a.faction)||'&mdash;')+' · Lv '+esc(a.level||'?')+' · '+esc(a.talent||'&mdash;')+'</div>'+wkHtml+'</div>';
   }).join('');
 }
 function renderDashboardRoleTable(){

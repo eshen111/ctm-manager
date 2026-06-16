@@ -248,6 +248,7 @@ td.actions{white-space:nowrap;text-align:right}
 .dash-char-card .cc-name{font-size:14px;font-weight:700}
 .dash-char-card .cc-ilvl{font-size:12px;color:var(--gold-light);font-weight:600}
 .dash-char-card .cc-meta{font-size:12px;color:var(--text-secondary);margin-bottom:8px}
+.dash-char-card .cc-valor{font-size:12px;color:var(--gold-light);font-weight:600;margin-bottom:6px}
 .dash-char-card .cc-week{padding-top:8px;border-top:1px solid var(--border);font-size:11px}
 .dash-char-card .cc-week-row{display:flex;justify-content:space-between;margin-bottom:3px}
 .dash-char-card .cc-week-row span:first-child{color:var(--text-muted)}
@@ -717,7 +718,7 @@ function renderDashboardCharCards(){
     var vd=valorData[a.charName];var v=vd?vd.current:0;
     var wk=charKills[a.charName];
     var wkHtml=wk?'<div class="cc-week"><div class="cc-week-row"><span>本周击杀</span><span>'+wk.bosses+' BOSS</span></div><div class="cc-week-row"><span>全通</span><span>'+wk.full+' 次</span></div></div>':'<div class="cc-week" style="color:var(--text-muted);font-style:italic">本周暂无击杀</div>';
-    return '<div class="dash-char-card" onclick="openAccountModal(accounts.find(function(x){return x.id===\''+a.id+'\'}))"><div class="cc-top"><span class="cc-name"><span class="class-tag '+getClassTag(a.class)+'">'+esc(a.class)+'</span> '+esc(a.charName)+'</span><span class="cc-ilvl">'+esc(a.ilvl||'?')+' · <span style="color:var(--gold-light)">'+v+'\u52C7\u6C14</span></span></div><div class="cc-meta">'+(esc(a.faction)||'&mdash;')+' · Lv '+esc(a.level||'?')+' · '+esc(a.talent||'&mdash;')+'</div>'+wkHtml+'</div>';
+    return '<div class="dash-char-card" onclick="openAccountModal(accounts.find(function(x){return x.id===\''+a.id+'\'}))"><div class="cc-top"><span class="cc-name"><span class="class-tag '+getClassTag(a.class)+'">'+esc(a.class)+'</span> '+esc(a.charName)+'</span><span class="cc-ilvl">'+esc(a.ilvl||'?')+'</span></div><div class="cc-valor">勇气 '+v+'</div><div class="cc-meta">'+(esc(a.faction)||'&mdash;')+' · Lv '+esc(a.level||'?')+' · '+esc(a.talent||'&mdash;')+'</div>'+wkHtml+'</div>';
   }).join('');
 }
 function renderDashboardRoleTable(){

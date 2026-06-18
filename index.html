@@ -544,10 +544,10 @@ function getRaidThu(label){var p=label.split('-R'),y=+p[0],wn=+p[1],s=new Date(y
 function initWeek(){curRaidWeek=getRaidWeek(new Date());document.getElementById('logModalWeekLabel').textContent=curRaidWeek}
 
 // ==================== PERSIST ====================
-function loadLocalData(){try{var r=localStorage.getItem('wow_ctm_v5');if(r){var d=JSON.parse(r);migrateAllData(d);accounts=d.accounts||[];guides=d.guides||[];raids=d.raids||[];battleLogs=d.battleLogs||[];valorData=d.valorData||{};customRaids=d.customRaids||{};valorHistory=d.valorHistory||[];saveData()}}catch(e){}}
+function loadLocalData(){try{var r=localStorage.getItem('wow_ctm_v5');if(r){var d=JSON.parse(r);migrateAllData(d);accounts=d.accounts||[];guides=d.guides||[];raids=d.raids||[];battleLogs=d.battleLogs||[];valorData=d.valorData||{};customRaids=d.customRaids||{};valorHistory=d.valorHistory||[];window._localTimestamp=d._timestamp||0;saveData()}}catch(e){}}
 async function saveData(){
   if(isRemoteUpdate)return;
-  var d={accounts:accounts,guides:guides,raids:raids,battleLogs:battleLogs,valorData:valorData,customRaids:customRaids,valorHistory:valorHistory};
+  var d={accounts:accounts,guides:guides,raids:raids,battleLogs:battleLogs,valorData:valorData,customRaids:customRaids,valorHistory:valorHistory,_timestamp:Date.now()};
   if(supabaseClient&&dataRowId)try{await supabaseClient.from('app_data').update({data:d,updated_at:new Date().toISOString()}).eq('id',dataRowId)}catch(e){}
   try{localStorage.setItem('wow_ctm_v5',JSON.stringify(d))}catch(e){}
 }
@@ -566,13 +566,26 @@ async function loadRemoteData(){
       if(hasRemote){
         // merge: remote has data, use it (and merge with local if local also has data)
         if(hasLocal){
-          accounts=mergeArrays(accounts,rdAccounts);
-          guides=mergeArrays(guides,rdGuides);
-          raids=mergeArrays(raids,rdRaids);
-          battleLogs=mergeArrays(battleLogs,dd.battleLogs||[]);
-          for(var k in dd.valorData){valorData[k]=dd.valorData[k]}
-          for(var k in dd.customRaids){customRaids[k]=dd.customRaids[k]}
-          valorHistory=mergeValorHistory(valorHistory,dd.valorHistory||[]);
+          var localTs=window._localTimestamp||0,remoteTs=dd._timestamp||0;
+          if(localTs>=remoteTs){
+            var localIds={};
+            accounts.forEach(function(a){localIds[a.id]=true});
+            rdAccounts.forEach(function(a){if(!localIds[a.id])accounts.push(a)});
+            localIds={};guides.forEach(function(g){localIds[g.id]=true});
+            rdGuides.forEach(function(g){if(!localIds[g.id])guides.push(g)});
+            localIds={};raids.forEach(function(r){localIds[r.id]=true});
+            rdRaids.forEach(function(r){if(!localIds[r.id])raids.push(r)});
+            localIds={};battleLogs.forEach(function(l){localIds[l.id]=true});
+            (dd.battleLogs||[]).forEach(function(l){if(!localIds[l.id])battleLogs.push(l)});
+            for(var k in dd.valorData){if(!(k in valorData)){valorData[k]=dd.valorData[k]}}
+            for(var k in dd.customRaids){if(!(k in customRaids)){customRaids[k]=dd.customRaids[k]}}
+            valorHistory=mergeValorHistory(valorHistory,dd.valorHistory||[]);
+          }else{
+            accounts=rdAccounts;guides=rdGuides;raids=rdRaids;battleLogs=dd.battleLogs||[];
+            for(var k in dd.valorData){valorData[k]=dd.valorData[k]}
+            for(var k in dd.customRaids){customRaids[k]=dd.customRaids[k]}
+            valorHistory=mergeValorHistory(valorHistory,dd.valorHistory||[]);
+          }
         }else{
           accounts=rdAccounts;guides=rdGuides;raids=rdRaids;battleLogs=dd.battleLogs||[];
           valorData=dd.valorData||{};customRaids=dd.customRaids||{};valorHistory=dd.valorHistory||[];
@@ -584,7 +597,7 @@ async function loadRemoteData(){
       return;
     }
     // no remote row at all, create one with local data
-    var d={accounts:accounts,guides:guides,raids:raids,battleLogs:battleLogs,valorData:valorData,customRaids:customRaids,valorHistory:valorHistory};
+    var d={accounts:accounts,guides:guides,raids:raids,battleLogs:battleLogs,valorData:valorData,customRaids:customRaids,valorHistory:valorHistory,_timestamp:Date.now()};
     var r2=await supabaseClient.from('app_data').insert({data:d}).select().single();
     if(r2.data){dataRowId=r2.data.id;localStorage.setItem('wow_data_id',dataRowId)}
   }catch(e){/* use local data loaded above */}
@@ -606,7 +619,7 @@ function mergeValorHistory(local,remote){
 
 async function syncToRemote(){
   if(!supabaseClient||!dataRowId)return;
-  var d={accounts:accounts,guides:guides,raids:raids,battleLogs:battleLogs,valorData:valorData,customRaids:customRaids,valorHistory:valorHistory};
+  var d={accounts:accounts,guides:guides,raids:raids,battleLogs:battleLogs,valorData:valorData,customRaids:customRaids,valorHistory:valorHistory,_timestamp:Date.now()};
   try{await supabaseClient.from('app_data').update({data:d,updated_at:new Date().toISOString()}).eq('id',dataRowId)}catch(e){}
 }
 function exportData(){var b=new Blob([JSON.stringify({accounts,guides,raids,battleLogs,valorData,customRaids,valorHistory},null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='wow_ctm_'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href);toast('已导出')}
@@ -900,6 +913,9 @@ function onWeekFilterChange(){
 function resetWeeklyProgress(){
   if(!confirm('确定重置当前周（'+curRaidWeek+'）所有副本进度和勇气点数？'))return;
   battleLogs=battleLogs.filter(function(l){return l.week!==curRaidWeek});
+  var snapshot={},hasData=false;
+  for(var cn in valorData){if(valorData[cn].current>0)hasData=true;snapshot[cn]=valorData[cn].current}
+  if(hasData){valorHistory.unshift({week:new Date().toISOString().slice(0,10),data:snapshot})}
   for(var k in valorData){valorData[k].current=0}
   saveData();renderAll();toast('本周已重置');
 }
@@ -932,7 +948,7 @@ function renderValorPanel(){
   }else{
     historyHtml='<div style="margin-top:8px;font-size:11px;color:var(--text-muted)"><em>暂无历史记录</em></div>';
   }
-  grid.insertAdjacentHTML('afterend','<div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button class="btn btn-sm btn-gold" onclick="refreshValorWeek()">本周刷新</button><small style="color:var(--text-muted)">归档当前点数并归零</small></div>'+historyHtml);
+  grid.insertAdjacentHTML('afterend',historyHtml);
 }
 
 function editValorRow(cn,e){
@@ -945,16 +961,6 @@ function editValorRow(cn,e){
 
 function toggleValorPanel(){
   document.getElementById('valorPanel').classList.toggle('collapsed');
-}
-
-function refreshValorWeek(){
-  if(!confirm('确定将当前勇气点数归档到历史记录并全部归零？'))return;
-  var snapshot={},hasData=false;
-  for(var cn in valorData){if(valorData[cn].current>0)hasData=true;snapshot[cn]=valorData[cn].current}
-  if(!hasData){toast('当前无勇气点数需要归档');return}
-  valorHistory.unshift({week:new Date().toISOString().slice(0,10),data:snapshot});
-  for(var cn in valorData){valorData[cn].current=0}
-  saveData();renderAll();toast('已归档并归零')
 }
 
 // ==================== CUSTOM RAIDS ====================

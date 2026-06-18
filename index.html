@@ -720,9 +720,8 @@ function renderDashboardStats(){
   var ds=document.getElementById('dashStats');
   var ml=accounts.filter(function(a){return +a.level>=85}).length;
   var hi=accounts.filter(function(a){return +a.ilvl>=397}).length;
-  // 本周击杀统计（近7天）
-  var now=new Date(),wk=new Date(now.getFullYear(),now.getMonth(),now.getDate()-6);
-  var wkKills=battleLogs.filter(function(b){return new Date(b.date)>=wk});
+  // 本周击杀统计（按CD周）
+  var wkKills=battleLogs.filter(function(b){return b.week===curRaidWeek});
   var wkBossTotal=wkKills.reduce(function(s,b){return s+(b.killed||Object.keys(b.bosses||{}).filter(function(k){return b.bosses[k].done}).length)},0);
   // 全通统计
   var fullClear=battleLogs.filter(function(b){return b.killed===b.totalBosses&&b.totalBosses>0}).length;
@@ -751,10 +750,9 @@ function renderDashboardKillFeed(){
 function renderDashboardCharCards(){
   var cc=document.getElementById('dashCharCards');
   if(!accounts.length){cc.innerHTML='<div class="dash-empty">暂无角色数据</div>';return}
-  // 计算每个角色本周击杀
-  var now=new Date(),wk=new Date(now.getFullYear(),now.getMonth(),now.getDate()-6);
+  // 计算每个角色本周击杀（按CD周而非自然日）
   var charKills={};
-  battleLogs.forEach(function(b){if(new Date(b.date)>=wk){
+  battleLogs.forEach(function(b){if(b.week===curRaidWeek){
     if(!charKills[b.charName])charKills[b.charName]={bosses:0,full:0,total:0};
     charKills[b.charName].bosses+=b.killed||0;charKills[b.charName].total+=b.totalBosses||0;
     if(b.killed===b.totalBosses&&b.totalBosses>0)charKills[b.charName].full++;
